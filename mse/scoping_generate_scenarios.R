@@ -339,8 +339,8 @@ plot(SRA, file = "SRA_LH_grid_base", dir = getwd(), open_file = FALSE, f_name = 
 Hist <- runMSE(SRA@OM, Hist = TRUE, parallel = TRUE)
 LH_grid$nll <- vapply(SRA@Misc, getElement, numeric(1), "nll")
 LH_grid$B_BMSY <- Hist@SampPars$D / Hist@Ref$SSBMSY_SSB0
-write.csv(LH_grid, file = "LH_grid.csv")
-LH_grid <- read.csv("LH_grid.csv")
+write.csv(LH_grid, file = "mse/scoping/LH_grid.csv")
+LH_grid <- read.csv("mse/scoping/LH_grid.csv")
 
 png("mse/scoping/LH_grid_base.png", width = 10, height = 5, units = "in", res = 400)
 par(mfrow = c(1, 2))
