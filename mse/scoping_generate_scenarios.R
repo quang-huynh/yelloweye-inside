@@ -284,6 +284,73 @@ MSEtool:::compare_SRA(s1, s2, s3, s4, s5,
             MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"),
                                                    col = gplots::rich.colors(5)))
 
+##### function to generate dataframe of mean fits (with scenario names)
+get_sra_survey <- function(sra, scenario, survey_names = c("HBLL", "Dogfish", "CPUE1", "CPUE2", "CPUE3")) {
+  report <- sra@mean_fit$report
+  n_surv <- dim(report$Ipred)[2]
+
+  extract_survey_fn <- function(i) {
+    observed <- sra@data$Index[, i]
+    predicted <- report$Ipred[, i]
+
+    dff <- data.frame(year = (sra@OM@CurrentYr-sra@OM@nyears+1):sra@OM@CurrentYr, observed = observed, predicted = predicted,
+                      scenario = scenario, survey = survey_names[i])
+    dff
+  }
+
+  out <- lapply(1:n_surv, extract_survey_fn)
+  do.call(rbind, out) %>% reshape2::melt(id.vars = c("year", "scenario", "survey"),
+                                         measure.vars = c("observed", "predicted"), variable.name = "type")
+}
+
+#out = get_sra_survey(s1, scenario = "Base")
+out = Map(get_sra_survey, sra = list(s1, s2, s3, s4, s5), scenario = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"))
+out = do.call(rbind, out)
+saveRDS(out, file = "mse/scoping/index_fits.rds")
+
+library(ggplot2)
+ggplot(out, aes(year, value, colour = type, linetype = scenario)) + facet_wrap(~ survey, scales = "free_y") + geom_point() + geom_line()
+
+
+get_sra_comps <- function(sra, scenario) {
+  require(dplyr)
+  report <- sra@mean_fit$report
+  year <- (sra@OM@CurrentYr-sra@OM@nyears+1):sra@OM@CurrentYr
+  age <- 1:80
+  obs <- structure(sra@data$s_CAA[,,1], dimnames = list(year, age))/rowSums(sra@data$s_CAA[,,1])
+  obs <- reshape2::melt(obs, varnames = c("year", "age"), na.rm = TRUE, value.name = "observed")
+
+  pred <- structure(report$s_CAApred[,,1], dimnames = list(year, age))/rowSums(report$s_CAApred[,,1])
+  pred <- reshape2::melt(pred, varnames = c("year", "age"), na.rm = TRUE, value.name = "predicted")
+
+  out <- dplyr::left_join(obs, pred, by = c("year", "age")) %>%
+    reshape2::melt(out, id.vars = c("year", "age"), measure.vars = c("observed", "predicted"), variable.name = "type")
+  out$scenario <- scenario
+  return(out)
+}
+#out = get_sra_comps(s1, scenario = "Base")
+out = Map(get_sra_comps, sra = list(s1, s2, s3, s4, s5), scenario = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"))
+out = do.call(rbind, out)
+saveRDS(out, file = "mse/scoping/age_comp_fits.rds")
+
+library(ggplot2)
+ggplot(filter(out, scenario == "Base"), aes(age, value, colour = type)) + facet_wrap(~ year, scales = "free_y") + geom_point() + geom_line()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
