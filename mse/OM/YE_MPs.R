@@ -33,14 +33,18 @@ class(CC_15t) <- "MP"
 IDX_YE <- function(x, Data, reps) {
   Data@Ind <- Data@AddInd[, 1, ]
   Data@CV_Ind <- Data@CV_AddInd[, 1, ]
-  gfdlm::IDX(x, Data, reps)
+  Rec <- gfdlm::IDX(x, Data, reps)
+  if(length(Rec@TAC) == 1 && !is.na(Rec@TAC) && Rec@TAC < 15) Rec@TAC <- 15
+  return(Rec)
 }
 class(IDX_YE) <- "MP"
 
 IDX_smooth_YE <- function(x, Data, reps) {
   Data@Ind <- Data@AddInd[, 1, ]
   Data@CV_Ind <- Data@CV_AddInd[, 1, ]
-  gfdlm::IDX_smooth(x, Data, reps)
+  Rec <- gfdlm::IDX_smooth(x, Data, reps)
+  if(length(Rec@TAC) == 1 && !is.na(Rec@TAC) && Rec@TAC < 15) Rec@TAC <- 15
+  return(Rec)
 }
 class(IDX_smooth_YE) <- "MP"
 
@@ -53,4 +57,12 @@ SP_YE <- function(x, Data, ...) {
 class(SP_YE) <- "Assess"
 
 ##### SP with 40-80 HCR
-SP_4080 <- make_MP(SP_YE, HCR_ramp, LRP = 0.4, TRP = 0.8, RP_type = "SSB_SSBMSY", diagnostic = "min")
+SP_4080 <- function(x, Data, reps = 1) {
+  do_Assessment <- SP_YE(x = x, Data = Data)
+  Rec <- HCR_ramp(Assessment = do_Assessment, reps = reps,
+                  LRP = 0.4, TRP = 0.8, RP_type = "SSB_SSBMSY")
+  if(length(Rec@TAC) == 1 && !is.na(Rec@TAC) && Rec@TAC < 15) Rec@TAC <- 15
+  Rec@Misc <- MSEtool:::Assess_diagnostic(x, Data, do_Assessment, include_assessment = FALSE)
+  return(Rec)
+}
+class(SP_4080) <- "MP"
