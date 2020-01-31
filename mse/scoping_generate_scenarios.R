@@ -219,56 +219,75 @@ OM_condition <- OM
 ################# Run SRA_scope
 # Base
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, #mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
 saveRDS(SRA, file = "mse/scoping/SRA_regwt_dogfish.rds")
 SRA <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
-plot(SRA, file = "mse/scoping/SRA_regwt_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+retro <- retrospective(SRA, 11)
+saveRDS(retro, file = "mse/scoping/ret_regwt_dogfish.rds")
+retro <- readRDS("mse/scoping/ret_regwt_dogfish.rds")
+plot(SRA, retro = retro, file = "mse/scoping/SRA_regwt_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
      MSY_ref = c(0.4, 0.8))
 
 # Upweight dogfish with lambdas
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, LWT = list(Index = c(1, 4, 1, 1, 1)),
                  vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
 saveRDS(SRA, file = "mse/scoping/SRA_upweight_dogfish.rds")
-SRA <- readRDS("mse/scoping/SRA_upweight_dogfish.rds")
-plot(SRA, file = "mse/scoping/SRA_upweight_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+#SRA <- readRDS("mse/scoping/SRA_upweight_dogfish.rds")
+retro <- retrospective(SRA, 11)
+saveRDS(retro, file = "mse/scoping/ret_upweight_dogfish.rds")
+#retro <- readRDS("mse/scoping/ret_upweight_dogfish.rds")
+plot(SRA, retro = retro, file = "mse/scoping/SRA_upweight_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
      MSY_ref = c(0.4, 0.8))
 
 # Remove commercial CPUE
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5),  length_bin = 0.1 * SRA_data$length_bin, cores = 2, mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, LWT = list(Index = c(1, 1, 0, 0, 0)),
                  vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
 saveRDS(SRA, file = "mse/scoping/SRA_no_CPUE.rds")
-SRA <- readRDS("mse/scoping/SRA_no_CPUE.rds")
-plot(SRA, file = "mse/scoping/SRA_no_CPUE", dir = getwd(), compare = FALSE, open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name, MSY_ref = c(0.4, 0.8))
+#SRA <- readRDS("mse/scoping/SRA_no_CPUE.rds")
+retro <- retrospective(SRA, 11)
+saveRDS(retro, file = "mse/scoping/ret_no_CPUE.rds")
+#retro <- readRDS("mse/scoping/ret_no_CPUE.rds")
+plot(SRA, retro = retro, file = "mse/scoping/SRA_no_CPUE", dir = getwd(), compare = FALSE, open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name, MSY_ref = c(0.4, 0.8))
 
 # Upweight HBLL
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, LWT = list(Index = c(4, 1, 1, 1, 1)),
                  vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
 saveRDS(SRA, file = "mse/scoping/SRA_upweight_HBLL.rds")
-SRA <- readRDS("mse/scoping/SRA_upweight_HBLL.rds")
-plot(SRA, file = "mse/scoping/SRA_upweight_HBLL", dir = getwd(), compare = FALSE, open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name)
+#SRA <- readRDS("mse/scoping/SRA_upweight_HBLL.rds")
+retro <- retrospective(SRA, 11)
+saveRDS(retro, file = "mse/scoping/ret_upweight_HBLL.rds")
+#retro <- readRDS("mse/scoping/ret_upweight_HBLL.rds")
+plot(SRA, retro = retro, file = "mse/scoping/SRA_upweight_HBLL", dir = getwd(), compare = FALSE, open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name)
 
 # Fix survey selectivity
 s_vul_par <- matrix(c(46.56615, 30.56082, 0.99), 3, 5)
 map_s_vul_par <- matrix(NA, 3, 5)
 
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, LWT = list(s_CAA = 0),
                  vul_par = SRA_data$vul_par, s_vul_par = s_vul_par, map_s_vul_par = map_s_vul_par,
                  map_log_rec_dev = rep(NA, OM_condition@nyears))
 saveRDS(SRA, file = "mse/scoping/SRA_fix_HBLL_sel.rds")
-SRA <- readRDS("mse/scoping/SRA_fix_HBLL_sel.rds")
+#SRA <- readRDS("mse/scoping/SRA_fix_HBLL_sel.rds")
+retro <- retrospective(SRA, 11)
+#retro <- readRDS("SRA_fix_HBLL_sel.rds")
 plot(SRA, file = "mse/scoping/SRA_fix_HBLL_sel", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
      MSY_ref = c(0.4, 0.8))
 
@@ -345,12 +364,66 @@ ggplot(filter(out, scenario == "Base"), aes(age, value, colour = type)) + facet_
 
 
 
+SRA <- list()
+
+# Loop over M
+M_loop <- seq(0.02, 0.06, 0.01)
+for(i in 1:length(M_loop)) {
+  OM_condition@M <- rep(M_loop[i], 2)
+  SRA[[i]] <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                   condition = "catch2",
+                   selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, #mean_fit = TRUE,
+                   s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
+                   map_log_rec_dev = SRA_data$map_log_rec_dev)
+  saveRDS(SRA[[i]], file = paste0("mse/scoping/M/regwt_dogfish_M0", M_loop[i] * 100, ".rds"))
+}
+
+retro <- sfLapply(SRA, retrospective, nyr = 11)
+
+for(i in 1:length(M_loop)) {
+  saveRDS(retro[[i]], paste0("mse/scoping/M/ret_regwt_dogfish_M0", M_loop[i] * 100, ".rds"))
+  plot(SRA[[i]], retro = retro[[i]], file = paste0("mse/scoping/M/regwt_dogfish_M0", M_loop[i] * 100), dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+       MSY_ref = c(0.4, 0.8))
+}
+
+SRA <- lapply(M_loop, function(x) readRDS(paste0("mse/scoping/M/regwt_dogfish_M0", x* 100, ".rds")))
+SRAp <- c(SRA, list(filename = "mse/scoping/M/compare_M", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                    MSY_ref = c(0.4, 0.8), scenario = list(names = paste0("M = 0.", 2:6))))
+do.call(compare_SRA, SRAp)
+
+compare_SRA(SRA[[1]], SRA[[2]], SRA[[3]], SRA[[4]], SRA[[5]],
+            filename = "mse/scoping/M/compare_M_regwt", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+            scenario = list(names = paste0("M = 0.", 2:6)), MSY_ref = c(0.4, 0.8))
 
 
 
 
 
 
+# Loop over M
+M_loop <- seq(0.02, 0.06, 0.01)
+for(i in 1:length(M_loop)) {
+  OM_condition@M <- rep(M_loop[i], 2)
+  SRA[[i]] <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                        condition = "catch2", LWT = c(1, 4, 1, 1, 1),
+                        selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, #mean_fit = TRUE,
+                        s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
+                        map_log_rec_dev = SRA_data$map_log_rec_dev)
+  saveRDS(SRA[[i]], file = paste0("mse/scoping/M/upweight_dogfish_M0", M_loop[i] * 100, ".rds"))
+}
+
+retro <- sfLapply(SRA, retrospective, nyr = 11)
+
+for(i in 1:length(M_loop)) {
+  saveRDS(retro[[i]], paste0("mse/scoping/M/ret_upweight_dogfish_M0", M_loop[i] * 100, ".rds"))
+  plot(SRA[[i]], retro = retro[[i]], file = paste0("mse/scoping/M/upweight_dogfish_M0", M_loop[i] * 100), dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+       MSY_ref = c(0.4, 0.8))
+}
+
+SRAp <- SRA
+SRAp <- c(SRA, list(file = "mse/scoping/M/compare_M", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                    MSY_ref = c(0.4, 0.8)))
+do.call(compare_SRA, SRAp)
 
 
 
@@ -379,8 +452,8 @@ plot(OM_condition@cpars$Perr, nll)
 
 
 
-###### Grid over M and steepness
-LH_grid <- expand.grid(M = seq(0.02, 0.06, 0.01), h = seq(0.65, 0.75, 0.01))
+###### Profile over M and steepness
+LH_grid <- expand.grid(M = seq(0.02, 0.07, 0.01), h = seq(0.65, 0.75, 0.01))
 
 OM_condition <- OM
 OM_condition@nsim <- nrow(LH_grid)
@@ -393,13 +466,14 @@ OM_condition@cpars$Mat_age <- array(Mat_age, c(OM@maxage, OM@nyears + OM@proyear
 
 #### Base
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 12,
                  s_CAA = SRA_data$s_CAA,
                  vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
-saveRDS(SRA, file = "SRA_LH_grid.rds")
-SRA <- readRDS("SRA_LH_grid.rds")
-plot(SRA, file = "SRA_LH_grid_base", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+saveRDS(SRA, file = "SRA_profile_M_and_h.rds")
+SRA <- readRDS("SRA_profile_M_and_h.rds")
+plot(SRA, file = "SRA_profile_M_and_h", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
      MSY_ref = c(0.4, 0.8))
 
 # Likelihood profile & stock status

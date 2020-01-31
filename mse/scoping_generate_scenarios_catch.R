@@ -219,25 +219,31 @@ OM_condition <- OM
 ################# Run SRA_scope
 # Base
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, #mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
-saveRDS(SRA, file = "mse/scoping/SRA_regwt_dogfish.rds")
-SRA <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
+saveRDS(SRA, file = "mse/scoping/catch/SRA_regwt_dogfish.rds")
+#SRA <- readRDS("mse/scoping/catch/SRA_regwt_dogfish.rds")
 retro <- retrospective(SRA, 11)
-saveRDS(retro, file = "mse/scoping/ret_regwt_dogfish.rds")
-plot(SRA, retro = retro, file = "mse/scoping/SRA_regwt_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+saveRDS(retro, file = "mse/scoping/catch/ret_regwt_dogfish.rds")
+#retro <- readRDS("mse/scoping/catch/ret_regwt_dogfish.rds")
+plot(SRA, retro = retro, file = "mse/scoping/catch/SRA_regwt_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
      MSY_ref = c(0.4, 0.8))
 
 # Upweight dogfish with lambdas
 SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2",
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, LWT = list(Index = c(1, 4, 1, 1, 1)),
                  vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
-saveRDS(SRA, file = "mse/scoping/SRA_upweight_dogfish.rds")
-SRA <- readRDS("mse/scoping/SRA_upweight_dogfish.rds")
-plot(SRA, file = "mse/scoping/SRA_upweight_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+saveRDS(SRA, file = "mse/scoping/catch/SRA_upweight_dogfish.rds")
+SRA <- readRDS("mse/scoping/catch/SRA_upweight_dogfish.rds")
+retro <- retrospective(SRA, 11)
+saveRDS(retro, file = "mse/scoping/catch/ret_upweight_dogfish.rds")
+retro <- readRDS("mse/scoping/catch/ret_upweight_dogfish.rds")
+plot(SRA, retro = retro, file = "mse/scoping/catch/SRA_upweight_dogfish", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
      MSY_ref = c(0.4, 0.8))
 
 # Remove commercial CPUE
@@ -276,15 +282,20 @@ plot(SRA, file = "mse/scoping/SRA_fix_HBLL_sel", dir = getwd(), open_file = FALS
 
 
 ##### Compare all these fits
-s1 <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
+s1 <- readRDS("mse/scoping/catch/SRA_regwt_dogfish.rds")
+s2 <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
+
+MSEtool:::compare_SRA(s1, s2,
+                      filename = "mse/scoping/catch/compare_regwt", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                      MSY_ref = c(0.4, 0.8), scenario = list(names = c("Low catch", "High catch"), col = gplots::rich.colors(5)))
+
+
+s1 <- readRDS("mse/scoping/catch/SRA_upweight_dogfish.rds")
 s2 <- readRDS("mse/scoping/SRA_upweight_dogfish.rds")
-s3 <- readRDS("mse/scoping/SRA_upweight_HBLL.rds")
-s4 <- readRDS("mse/scoping/SRA_fix_HBLL_sel.rds")
-s5 <- readRDS("mse/scoping/SRA_no_CPUE.rds")
-MSEtool:::compare_SRA(s1, s2, s3, s4, s5,
-            filename = "mse/scoping/compare_SRA", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
-            MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"),
-                                                   col = gplots::rich.colors(5)))
+
+MSEtool:::compare_SRA(s1, s2,
+                      filename = "mse/scoping/catch/compare_upweight", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                      MSY_ref = c(0.4, 0.8), scenario = list(names = c("Low catch", "High catch"), col = gplots::rich.colors(5)))
 
 
 
@@ -396,5 +407,6 @@ dev.off()
 ### Fit a surplus production model
 SRA <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
 mod <- SP(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03), dep = 0.9))
-plot(mod, dir = getwd(), filename = "mse/scoping/report_SP", open_file = FALSE)
+ret = retrospective(mod, 11)
+plot(mod, ret, dir = getwd(), filename = "mse/scoping/report_SP", open_file = FALSE)
 
