@@ -2,7 +2,7 @@ library(MSEtool)
 library(dplyr)
 library(reshape2)
 
-##### Setup SRA data inputs
+#### Setup SRA data inputs
 #SRA_data <- list(Year = 1918:2019)
 #SRA_data$Len_bins <- seq(100, 850, 50)
 #SRA_data$length_bin <- SRA_data$Len_bins[-length(SRA_data$Len_bins)] + 25
@@ -62,6 +62,7 @@ library(reshape2)
 #  rec_len_matrix <- summarise(group_by(res, YEAR, Len_bin), n = n()) %>% acast(list("YEAR", "Len_bin"), value.var = "n", fill = 0)
 #
 #  Len_bins_avail <- colnames(rec_len_matrix) %>% as.numeric()
+#  Nareas <- summarise(group_by(res, YEAR), n = length(unique(SUBAREA)))
 #
 #  #plot_composition(as.numeric(rownames(rec_len_matrix)), rec_len_matrix, CAL_bins = Len_bins_avail)
 #  #plot(Len_bins_avail, colSums(rec_len_matrix), typ = 'o')
@@ -71,7 +72,7 @@ library(reshape2)
 #    out <- rep(NA, length(SRA_data$Len_bins)-1) %>% as.numeric()
 #    if(!is.na(ind)) {
 #      L_ind <- match(Len_bins_avail, SRA_data$Len_bins)
-#      out[L_ind] <- rec_len_matrix[ind, ]
+#      out[L_ind] <- rec_len_matrix[ind, ] * Nareas$n[ind]/sum(rec_len_matrix[ind, ])
 #    }
 #    return(out)
 #  }
@@ -214,6 +215,21 @@ OM@cpars$Mat_age <- array(Mat_age, c(OM@maxage, OM@nyears + OM@proyears, OM@nsim
 
 OM_condition <- OM
 
+################# Add age and length comp from fishery
+SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 condition = "catch2", CAL = SRA_data$CAL, CAA = 5*SRA_data$CAA, LWT = list(Index = c(1, 1, 1, 1, 1)),
+                 selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 2, #mean_fit = TRUE,
+                 s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, #map_vul_par = matrix(c(NA, NA, NA, 1, 2, NA), 3, 2),
+                 map_s_vul_par = SRA_data$map_s_vul_par, map_log_rec_dev = SRA_data$map_log_rec_dev)
+saveRDS(SRA, file = "mse/scoping/SRA_hi_fish_sel.rds")
+SRA <- readRDS("mse/scoping/SRA_hi_fish_sel.rds")
+retro <- retrospective(SRA, 11)
+saveRDS(retro, file = "mse/scoping/ret_hi_fish_sel.rds")
+retro <- readRDS("mse/scoping/ret_hi_fish_sel.rds")
+plot(SRA, retro = retro, file = "mse/scoping/SRA_hi_fish_sel", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+     MSY_ref = c(0.4, 0.8))
+
+OM_condition@M = rep(0.02, 2)
 
 
 ################# Run SRA_scope
@@ -298,10 +314,19 @@ s2 <- readRDS("mse/scoping/SRA_upweight_dogfish.rds")
 s3 <- readRDS("mse/scoping/SRA_upweight_HBLL.rds")
 s4 <- readRDS("mse/scoping/SRA_fix_HBLL_sel.rds")
 s5 <- readRDS("mse/scoping/SRA_no_CPUE.rds")
+s6 <- readRDS("mse/scoping/SRA_hi_fish_sel.rds")
+s7 <- readRDS("mse/scoping/catch/SRA_regwt_dogfish.rds")
+s8 <- readRDS("mse/scoping/catch/SRA_upweight_dogfish.rds")
+
 MSEtool:::compare_SRA(s1, s2, s3, s4, s5,
             filename = "mse/scoping/compare_SRA", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
             MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"),
                                                    col = gplots::rich.colors(5)))
+
+MSEtool:::compare_SRA(s1, s2, s6, s7, s8,
+                      filename = "mse/scoping/compare_SRA2", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                      MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Hi sel", "Low catch", "Low catch up. dogfish"),
+                                                             col = gplots::rich.colors(5)))
 
 ##### function to generate dataframe of mean fits (with scenario names)
 get_sra_survey <- function(sra, scenario, survey_names = c("HBLL", "Dogfish", "CPUE1", "CPUE2", "CPUE3")) {
@@ -534,6 +559,6 @@ dev.off()
 
 ### Fit a surplus production model
 SRA <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
-mod <- SP(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03), dep = 0.9))
+mod <- SP(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03)))
 plot(mod, dir = getwd(), filename = "mse/scoping/report_SP", open_file = FALSE)
 

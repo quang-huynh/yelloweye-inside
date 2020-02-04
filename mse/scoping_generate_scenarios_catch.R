@@ -405,8 +405,10 @@ dev.off()
 
 
 ### Fit a surplus production model
-SRA <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
-mod <- SP(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03), dep = 0.9))
-ret = retrospective(mod, 11)
-plot(mod, ret, dir = getwd(), filename = "mse/scoping/report_SP", open_file = FALSE)
+SRA <- readRDS("mse/scoping/catch/SRA_regwt_dogfish.rds")
+mod <- SP_SS(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03)))
 
+SRA <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
+mod2 <- SP_SS(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03)))
+
+compare_models(mod, mod2)

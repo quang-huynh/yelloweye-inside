@@ -61,7 +61,7 @@ OM_condition <- OM
 setup(12)
 
 # Base
-SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+SRA <- SRA_scope(OM_condition, condition = "catch2", Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 12, #mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
@@ -72,7 +72,7 @@ plot(SRA, file = "mse/OM/OM_base", dir = getwd(), open_file = FALSE, f_name = SR
      MSY_ref = c(0.4, 0.8))
 
 # Upweight dogfish with lambdas
-SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+SRA <- SRA_scope(OM_condition, condition = "catch2", Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 12, mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, LWT = list(Index = c(1, 4, 1, 1, 1)),
                  vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
@@ -87,7 +87,7 @@ plot(SRA, file = "mse/OM/OM_upweight_dogfish", dir = getwd(), open_file = FALSE,
 
 # h in sim 17 is very low 0.38 and needs to be replaced
 OM_condition@cpars$M <- rep(0.02, OM@nsim)
-SRA <- SRA_scope(OM_condition, Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+SRA <- SRA_scope(OM_condition, condition = "catch2", Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
                  selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 12, #mean_fit = TRUE,
                  s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
                  map_log_rec_dev = SRA_data$map_log_rec_dev)
@@ -97,9 +97,81 @@ plot(SRA, file = "mse/OM/OM_lowM", dir = getwd(), open_file = FALSE, f_name = SR
      MSY_ref = c(0.4, 0.8))
 
 
-#OM <- SRA@OM
-#OM@cpars$h
-#
-#OM2 <- Sub_cpars(OM, sims = c(1, 17))
-#Hist <- runMSE(OM2, Hist = TRUE)
+# Low catch
+SRA_data$Chist[match(1986:2005, SRA_data$Year), 1] <- 0.5 * SRA_data$Chist[match(1986:2005, SRA_data$Year), 1]
+sfExportAll()
+SRA <- SRA_scope(OM_condition, condition = "catch2", Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 12, mean_fit = TRUE,
+                 s_CAA = SRA_data$s_CAA, LWT = list(Index = c(1, 4, 1, 1, 1)),
+                 vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
+                 map_log_rec_dev = SRA_data$map_log_rec_dev)
+
+saveRDS(SRA, file = "mse/OM/low_catch.rds")
+#SRA <- readRDS("mse/OM/OM_low_catch.rds")
+plot(SRA, file = "mse/OM/OM_low_catch", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+     MSY_ref = c(0.4, 0.8))
+
+
+
+# M pinniped
+Mp <- readxl::read_excel("mse/scoping/pinniped_M.xlsx") + 0.02
+Mp$mu <- log(Mp$Median)
+
+find_sigma <- function(Mp) {
+  uniroot_fn <- function(sd, mu, upper_q) {
+    mean_ <- exp(mu + 0.5 * sd *sd)
+    mean_log <- log(mean_)
+    plnorm(upper_q, mean_log, sd) - 0.975
+  }
+  out <- mapply(function(x, y) uniroot(uniroot_fn, interval = c(1e-8, 10), mu = x, upper_q = y)$root,
+                x = Mp$mu, y = Mp$Upper)
+  return(out)
+}
+Mp$sigma <- find_sigma(Mp)
+
+set.seed(205)
+Msamps_p <- runif(OM@nsim)
+out_fn <- function(x, y) qlnorm(x, -0.5 * y^2, y)
+M_dev <- outer(Msamps_p, Mp$sigma, out_fn) %>% t() %>% "*"(Mp$Median)
+matplot(M_dev, type = 'l')
+apply(M_dev, 1, mean)
+
+Msamps_extra <- M_dev[nrow(M_dev), ] %>% matrix(OM@proyears + 10, OM@nsim, byrow = TRUE)
+
+OM@cpars$M <- NULL
+OM@cpars$M_ageArray <- rbind(M_dev, Msamps_extra) %>% array(c(OM@nyears + OM@proyears, OM@nsim, OM@maxage)) %>%
+  aperm(c(2, 3, 1))
+OM_condition <- OM
+
+SRA <- SRA_scope(OM_condition, condition = "catch2", Chist = SRA_data$Chist, Index = SRA_data$Index, I_sd = SRA_data$I_sd, I_type = SRA_data$I_type,
+                 selectivity = rep("logistic", 2), s_selectivity = rep("logistic", 5), length_bin = 0.1 * SRA_data$length_bin, cores = 12, #mean_fit = TRUE,
+                 s_CAA = SRA_data$s_CAA, vul_par = SRA_data$vul_par, map_s_vul_par = SRA_data$map_s_vul_par,
+                 map_log_rec_dev = SRA_data$map_log_rec_dev)
+saveRDS(SRA, file = "mse/OM/pinniped.rds")
+#SRA <- readRDS("mse/OM/pinniped.rds")
+plot(SRA, file = "mse/OM/OM_pinniped", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+     MSY_ref = c(0.4, 0.8))
+
+
+#### Episodic recruitment
+SRA <- readRDS("mse/OM/upweight_dogfish.rds")
+set.seed(324)
+
+sporadic_recruitment2 <- function(x, years = length(x), low_sigmaR = 0.4, high_sigmaR = 0.8) {
+  require(dplyr)
+  nhigh <- 25
+
+  high_ind <- sample(1:years, nhigh)
+  new_samp <- rnorm(nhigh, -0.5 * high_sigmaR^2, high_sigmaR) %>% exp()
+
+  x[high_ind] <- new_samp
+
+  return(x)
+}
+
+new_Perr_y <- apply(SRA@OM@cpars$Perr_y[, 182:281], 1, sporadic_recruitment2)
+SRA@OM@cpars$Perr_y[, 182:281] <- t(new_Perr_y)
+saveRDS(SRA, file = "mse/OM/sporadic_recruitment.rds")
+
+
 
