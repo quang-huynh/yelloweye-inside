@@ -309,25 +309,49 @@ plot(SRA, file = "mse/scoping/SRA_fix_HBLL_sel", dir = getwd(), open_file = FALS
 
 
 ##### Compare all these fits
-s1 <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
-s2 <- readRDS("mse/scoping/SRA_upweight_dogfish.rds")
-s3 <- readRDS("mse/scoping/SRA_upweight_HBLL.rds")
-s4 <- readRDS("mse/scoping/SRA_fix_HBLL_sel.rds")
-s5 <- readRDS("mse/scoping/SRA_no_CPUE.rds")
-s6 <- readRDS("mse/scoping/SRA_hi_fish_sel.rds")
-s7 <- readRDS("mse/scoping/catch/SRA_regwt_dogfish.rds")
-s8 <- readRDS("mse/scoping/catch/SRA_upweight_dogfish.rds")
+library(MSEtool); library(dplyr)
+vec <- c("SRA_regwt_dogfish", "SRA_upweight_dogfish", "SRA_upweight_HBLL", "SRA_fix_HBLL_sel",
+         "SRA_no_CPUE", "SRA_hi_fish_sel", "catch/SRA_regwt_dogfish", "catch/SRA_upweight_dogfish")
 
-MSEtool:::compare_SRA(s1, s2, s3, s4, s5,
+SRA_list <- lapply(vec, function(x) readRDS(paste0("mse/scoping/", x, ".rds"))) %>% structure(names = vec)
+
+for(i in 1:length(vec)) {
+  plot(SRA_list[[i]], file = paste0("mse/scoping/", vec[i]), dir = getwd(), open_file = FALSE,
+       f_name = SRA_data$f_name, s_name = SRA_data$s_name, MSY_ref = c(0.4, 0.8),
+       render_args = list(output_format = "word_document"))
+}
+
+#s1 <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
+#s2 <- readRDS("mse/scoping/SRA_upweight_dogfish.rds")
+#s3 <- readRDS("mse/scoping/SRA_upweight_HBLL.rds")
+#s4 <- readRDS("mse/scoping/SRA_fix_HBLL_sel.rds")
+#s5 <- readRDS("mse/scoping/SRA_no_CPUE.rds")
+#s6 <- readRDS("mse/scoping/SRA_hi_fish_sel.rds")
+#s7 <- readRDS("mse/scoping/catch/SRA_regwt_dogfish.rds")
+#s8 <- readRDS("mse/scoping/catch/SRA_upweight_dogfish.rds")
+
+MSEtool:::compare_SRA(SRA_list[[1]], SRA_list[[2]], SRA_list[[3]], SRA_list[[4]], SRA_list[[5]],
             filename = "mse/scoping/compare_SRA", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
             MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"),
                                                    col = gplots::rich.colors(5)))
 
-MSEtool:::compare_SRA(s1, s2, s6, s7, s8,
+MSEtool:::compare_SRA(SRA_list[[1]], SRA_list[[2]], SRA_list[[6]], SRA_list[[7]], SRA_list[[8]],
                       filename = "mse/scoping/compare_SRA2", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
                       MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Hi sel", "Low catch", "Low catch up. dogfish"),
                                                              col = gplots::rich.colors(5)))
 
+### Word doc
+MSEtool:::compare_SRA(SRA_list[[1]], SRA_list[[2]], SRA_list[[3]], SRA_list[[4]], SRA_list[[5]],
+                      filename = "mse/scoping/compare_SRA", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                      MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"),
+                                                             col = gplots::rich.colors(5)),
+                      render_args = list(output_format = "word_document"))
+
+MSEtool:::compare_SRA(SRA_list[[1]], SRA_list[[2]], SRA_list[[3]], SRA_list[[4]], SRA_list[[5]],
+                      filename = "mse/scoping/compare_SRA", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                      MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"),
+                                                             col = gplots::rich.colors(5)),
+                      render_args = list(output_format = "word_document"))
 ##### function to generate dataframe of mean fits (with scenario names)
 get_sra_survey <- function(sra, scenario, survey_names = c("HBLL", "Dogfish", "CPUE1", "CPUE2", "CPUE3")) {
   report <- sra@mean_fit$report
