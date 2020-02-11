@@ -8,25 +8,30 @@ library("here")
 # source(here("analysis/rex/plot-functions.R"))
 
 # Settings --------------------------------------------------------------------
-reference_mp <- "FMSYref"
+reference_mp <- c("FMSYref", "NFref")
 sp <- "ye"
 
 # Satisficing rules:
 
-# 80% above LRP within 56 years (one MGT), 95% within 1.5 MGT
+# 80% above LRP within 56 years (1.5 MGT), 95% within 1.5 MGT
 # 50% above USR
 LT_LRP_thresh <- 0.8
+LT_USR_thresh <- 0.5
 STC_thresh <- 0.7
 
 # Set up PMs ------------------------------------------------------------------
 
 `LT LRP` <- gfdlm::pm_factory("SBMSY", 0.4, c(56, 100))
 `LT USR` <- gfdlm::pm_factory("SBMSY", 0.8, c(56, 100))
+
+`LRP 1GT` <- gfdlm::pm_factory("SBMSY", 0.4, c(38, 38))
+`LRP 1.5GT` <- gfdlm::pm_factory("SBMSY", 0.4, c(56, 56))
+`USR 1.5GT` <- gfdlm::pm_factory("SBMSY", 0.8, c(56, 56))
 `FMSY` <- DLMtool::PNOF
 `AAVC` <- DLMtool::AAVY
 `STC` <- gfdlm::pm_factory("LTY", 0.5, c(1, 10))
-`LTC` <- gfdlm::pm_factory("LTY", 0.5, c(36, 50))
-PM <- c("LT LRP", "LT USR", "FMSY", "STC", "LTC", "AAVC")
+`LTC` <- gfdlm::pm_factory("LTY", 0.5, c(38, 38))
+PM <- c("LRP 1GT", "LRP 1.5GT", "USR 1.5GT", "FMSY", "STC", "LTC", "AAVC")
 
 # Set up and checks -----------------------------------------------------------
 sc <- readRDS("mse/OM/ye-scenarios.rds")
@@ -53,70 +58,52 @@ scenarios_rob <- get_filtered_scenario("Robustness", "scenario")
 scenarios_rob_human <- get_filtered_scenario("Robustness", "scenarios_human")
 
 # Read OMs --------------------------------------------------------------------
-
-#om <- map(scenarios, ~ {
-#  om <- readRDS("mse/OM/generated-data", paste0(sp, "-sra-", .x, ".rds")))@OM
-#  if (om@nsim < nsim) {
-#    stop("nsim set larger than in conditioned OM.", call. = FALSE)
-#  }
-#  om@nsim <- nsim
-#  om@interval <- interval
-#  om
-#})
 om <- lapply(scenarios, function(x) readRDS(paste0("mse/OM/", x, ".rds"))@OM)
 names(om) <- scenarios
 #
-## Fit MPs to all OMs ----------------------------------------------------------
-#
-#fit_scenario <- function(scenario) {
-#  file_name <- here("generated-data", paste0(sp, "-mse-", scenario, ".rds"))
-#  if (!file.exists(file_name)) {
-#    message("Running closed-loop-simulation for ", scenario, " OM")
-#    DLMtool::setup(cpus = cores)
-#    mse <- runMSE(OM = om[[scenario]], MPs = mp$mp, parallel = TRUE)
-#    snowfall::sfStop()
-#    saveRDS(mse, file = file_name)
-#  } else {
-#    message("Loading closed-loop-simulation for ", scenario, " OM")
-#    mse <- readRDS(file_name)
-#  }
-#  mse
-#}
-#mse <- map(scenarios, fit_scenario)
+
 mse <- lapply(scenarios, function(x) readRDS(paste0("mse/OM/MSE_", x, ".rds")))
 names(mse) <- scenarios
 
+
 # Satisficing -----------------------------------------------------------------
 
-pm_df_list <- map(mse[scenarios_ref], ~ gfdlm::get_probs(.x, PM))
-pm_df_list_rob <- map(mse[scenarios_rob], ~ gfdlm::get_probs(.x, PM))
-pm_df <- bind_rows(pm_df_list, .id = "scenario")
+pm_df_list <- map(mse[scenarios_ref], ~ gfdlm::get_probs(.x, PM)) # List with all OMs and PMs
+pm_df_list_rob <- map(mse[scenarios_rob], ~ gfdlm::get_probs(.x, PM)) # Robustness only
+pm_df <- bind_rows(pm_df_list, .id = "scenario") # All as a data.frame
+
+
+
 saveRDS(pm_df, file = "mse/ye-pm-all.rds")
-pm_avg <- group_by(pm_df, MP) %>% summarise_if(is.numeric, mean)
+pm_avg <- group_by(pm_df, MP) %>% summarise_if(is.numeric, mean) # Average across OMs
 pm_min <- group_by(pm_df, MP) %>% summarise_if(is.numeric, min)
 
 mp_sat <- pm_df_list[[1]]$MP[-19]
-mp_sat <- dplyr::filter(pm_min, `LT LRP` > LT_LRP_thresh, `STC` > STC_thresh) %>%
-  arrange(-`LT LRP`) %>%
-  pull(MP)
-mp_sat <- mp_sat[!mp_sat %in% reference_mp]
-mp_sat
-stopifnot(length(mp_sat) > 1)
-mp_sat_with_ref <- union(mp_sat, reference_mp)
-mp_not_sat <- mp$mp[!mp$mp %in% mp_sat_with_ref]
-stopifnot(length(mp_not_sat) > 1)
+mp_fixedTAC <- mp_sat[1:5]
+mp_index <- mp_sat[6:14]
+mp_sp <- mp_sat[15:18]
 
-mse_sat <- purrr::map(scenarios, ~ DLMtool::Sub(mse[[.x]], MPs = mp_sat))
-mse_sat_with_ref <- purrr::map(scenarios_ref, ~ DLMtool::Sub(mse[[.x]], MPs = mp_sat_with_ref))
-mse_not_sat <- purrr::map(scenarios, ~ DLMtool::Sub(mse[[.x]], MPs = mp_not_sat))
 
-pm_df_list_sat <- map(pm_df_list, ~filter(.x, MP %in% mp_sat))
-pm_df_list_sat_with_ref <- map(pm_df_list, ~filter(.x, MP %in% mp_sat_with_ref))
-pm_df_not_sad <- map(pm_df_list, ~filter(.x, MP %in% mp_not_sat))
+mse_fixed <- purrr::map(scenarios, ~ DLMtool::Sub(mse[[.x]], MPs = mp_fixedTAC))
+mse_index <- purrr::map(scenarios, ~ DLMtool::Sub(mse[[.x]], MPs = mp_index))
+mse_sp <- purrr::map(scenarios, ~ DLMtool::Sub(mse[[.x]], MPs = mp_sp))
+
+pm_df_list_fixed <- map(pm_df_list, ~filter(.x, MP %in% mp_fixedTAC))
+pm_df_list_index <- map(pm_df_list, ~filter(.x, MP %in% mp_index))
+pm_df_list_sp <- map(pm_df_list, ~filter(.x, MP %in% mp_sp))
+
+
+pm_df_list_fixed_rob <- map(pm_df_list_rob, ~filter(.x, MP %in% mp_fixedTAC))
+pm_df_list_index_rob <- map(pm_df_list_rob, ~filter(.x, MP %in% mp_index))
+pm_df_list_sp_rob <- map(pm_df_list_rob, ~filter(.x, MP %in% mp_sp))
 
 # Tigure plots ----------------------------------------------------------------
 
-g <- gfdlm::plot_tigure(pm_avg)
+g <- gfdlm::plot_tigure(pm_df_list_fixed_rob[[3]])
+g <- gfdlm::plot_tigure(pm_df_list_index[[1]])
+
+ggsave('mse/figures/pm-table-fixed-low_catch.png', width= 5,height= 6.25)
+ggsave('mse/figures/pm-table-fixed-base.png', width= 5,height= 6.25)
 .ggsave("pm-table-avg", 4.25, 6.25)
 g <- gfdlm::plot_tigure(pm_min,
   satisficed = c("LT LRP" = LT_LRP_thresh, "STC" = STC_thresh)
@@ -152,132 +139,76 @@ walk(names(mse_sat), ~ {
 
 # Projections -----------------------------------------------------------------
 
-walk(names(mse_sat_with_ref), ~ {
-  g <- plot_main_projections(mse_sat_with_ref[[.x]],
-    catch_breaks = c(0, 100000, 200000),
-    catch_labels = c("0", "100", "200"))
-  .ggsave(paste0("projections-satisficed-", .x), 6.5, 6.5)
+walk(names(mse_fixed), ~ {
+  g <- plot_main_projections(mse_fixed[[.x]],
+    catch_breaks = c(0, 100, 200, 300),
+    catch_labels = c("0", "100", "200", "300"))
+  .ggsave(paste0("projections-fixedTAC-", .x), 6.5, 6.5)
 }
 )
 
 
-walk(names(mse_sat), ~ {
-  g <- plot_main_projections(mse_sat[[.x]],
-                             catch_breaks = c(0, 100000, 200000),
-                             catch_labels = c("0", "100", "200"))
-  .ggsave(paste0("projections-satisficed-", .x), 6.5, 6.5)
+walk(names(mse_index), ~ {
+  g <- plot_main_projections(mse_index[[.x]],
+                             catch_breaks = c(0, 100, 200, 300),
+                             catch_labels = c("0", "100", "200", "300"))
+  .ggsave(paste0("projections-index-", .x), 6.5, 6.5)
 }
 )
 
-walk(names(mse_sat), ~ {
-  g <- gfdlm::plot_kobe(mse_sat[[.x]])
-  .ggsave(paste0("kobe-", .x), 8, 7.5)
-})
 
-# Radar plots -----------------------------------------------------------------
-
-custom_pal <- c(RColorBrewer::brewer.pal(length(mp_sat), "Set2"),
-  "grey60", "grey20", "grey85") %>% set_names(mp_sat_with_ref)
-custom_pal
-# spider_plots <- walk(scenarios_ref, plot_radar),
-#   MPs = mp_sat_ref,
-#   mptype = "satisficed", custom_pal = custom_pal
-# )
-# spider_plots <- map(scenarios_ref, make_spider,
-#   MPs = mp_sat,
-#   save_plot = FALSE, custom_pal = custom_pal, legend = FALSE
-# )
-# g <- plot_grid_pbs(
-#   plotlist = spider_plots, labels = scenarios_ref_human, spider_margins = TRUE
-# )
-# .ggsave("spider-satisficed-panel", 11, 10)
-# spider_plots_rob <- map(scenarios_rob, make_spider,
-#   MPs = mp_sat,
-#   save_plot = FALSE, custom_pal = custom_pal, legend = FALSE
-# )
-# g <- plot_grid_pbs(
-#   plotlist = spider_plots_rob, labels = scenarios_rob_human, spider_margins = TRUE
-# )
-# .ggsave("spider-satisficed-panel-robust", 8, 4)
-
-# Make multipanel plot of spider plots for satisficed MPs; averaged only
-# type_order <- forcats::fct_relevel(mp$type, "Reference", after = 0L)
-# spider_plots <- split(mp, type_order) %>%
-#   map(~ spider_base(filter(pm_avg, MP %in% .x$mp)))
-# g <- plot_grid_pbs(plotlist = spider_plots, labels = names(spider_plots),
-#   spider_margins = TRUE, ncol = 2) +
-#   theme(plot.margin = unit(c(0.2, 0.2, -0.5, 1.0), "lines"))
-# .ggsave("all-mptypes-avg-panel", 9.5, 10)
-# # just average:
-# g <- spider_base(filter(pm_avg, MP %in% mp_sat_ref)) +
-#   scale_colour_manual(values = custom_pal)
-# .ggsave("satisficed-avg", width = 6, height = 6)
-
-# Make not satisficed plot for base (these MPs not tested in other scenarios)
-DLMtool::Sub(mse[[base_om]], MPs = mp_not_sat) %>%
-  make_projection_plot(scenario = base_om, mptype = "not-satisficed", height = 27)
-
-make_kobe_plot(base_om, MPs = mp_not_sat, mptype = "not-satisficed",
-  show_contours = FALSE)
-# Example not satisficed ones:
-toplot <- c(
-  "CC_hist",
-  "CC90",
-  ".GB_slope8_0.66",
-  ".Islope0.2_80",
-  ".ICI2",
-  ".IDX_smooth",
-  ".IT5_hist",
-  ".ITM_hist",
-  ".SP6040_prior"
+walk(names(mse_sp), ~ {
+  g <- plot_main_projections(mse_sp[[.x]],
+                             catch_breaks = c(0, 100, 200, 300),
+                             catch_labels = c("0", "100", "200", "300"))
+  .ggsave(paste0("projections-sp-", .x), 6.5, 6.5)
+}
 )
 
-DLMtool::Sub(mse[[base_om]], MPs = mp_not_sat) %>%
-  make_projection_plot(MPs = toplot[toplot %in% mp_not_sat],
-  mptype = "eg-not-satisficed", scenario = base_om, height = 9,
-  catch_breaks = c(0, 100000, 200000),
-  catch_labels = c("0", "100", "200"))
-
-# Psychedelic pyramid worms ---------------------------------------------------
-
-walk(names(mse_sat), ~{
-  plot_worm(mse_sat[[.x]], this_year = this_year, prob = prob)
-  .ggsave(paste0("neon-worms-", .x), 8, 6.6)
-})
-
-# Sensitivity plots -----------------------------------------------------------
-
-slots <- c("D", "hs", "M", "ageM", "L50", "Linf", "K", "Isd")
-
-g <- DLMtool::Sub(mse[[base_om]], MPs = mp_sat) %>%
-  gfdlm::plot_sensitivity(`LT LRP`, slots = slots,
-    ylab = expression(Mean~SSB/SSB[MSY]~"in"~years~36-50))
-.ggsave("sensitivity-bbmsy-base", 12.5, 8)
-
-g <- DLMtool::Sub(mse[[base_om]], MPs = mp_sat) %>%
-  gfdlm::plot_sensitivity(`STY`, slots = slots,
-    ylab = "Mean catch/reference catch in years 6-20")
-.ggsave("sensitivity-yield-base", 12.5, 8)
-
-g <- DLMtool::Sub(mse[[base_om]], MPs = mp_sat) %>%
-  gfdlm::plot_sensitivity_trajectory("B_BMSY", slots = slots) +
-  coord_cartesian(ylim = c(0, 4))
-.ggsave("sensitivity-traj-bbmsy-base", 12.5, 7)
-
-g <- DLMtool::Sub(mse[[base_om]], MPs = mp_sat) %>%
-  gfdlm::plot_sensitivity_trajectory("F_FMSY", slots = slots) +
-  coord_cartesian(ylim = c(0, 4))
-.ggsave("sensitivity-traj-ffmsy-base", 12.5, 7)
-
-# Optimize PNG files on Unix --------------------------------------------------
-
-cores <- round(parallel::detectCores() / 2L)
-files_per_core <- 5L
-setwd(fig_dir)
-if (!gfplot:::is_windows()) {
-  system(paste0(
-    "find -X . -name '*.png' -print0 | xargs -0 -n ",
-    files_per_core, " -P ", cores, " optipng -strip all"
-  ))
+# Plot future HBLL
+future_hbll <- function(mse, MPs) {
+  MP_ind <- match(MPs, mse[[1]]@MPs)
+  hbll <- lapply(mse, function(x) {
+    lapply(x@Misc$Data[MP_ind], function(y) {
+      apply(y@AddInd[, 1, ], 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975), na.rm = TRUE)
+      })
+  })
+  par(mfrow = c(length(mse), length(MPs)), mar = c(0, 0, 0, 0), oma = c(5, 4, 3, 3))
+  for(i in 1:length(mse)) {
+    for(j in 1:length(MPs)) {
+      matplot(c(1917 + 1:ncol(hbll[[i]][[j]]))[-c(1:82)], t(hbll[[i]][[j]][, -c(1:82)]), typ = 'l',
+              lty = c(2, 1, 1, 2, 2), col = "black", lwd = c(1, 1, 2, 1, 1),
+              yaxt = ifelse(j == 1, 's', 'n'), xaxt = ifelse(i == length(mse), "s", "n"))
+      #if(j == 1) legend("topleft", names(mse)[i], bty = 'n')
+      if(i == 1) {
+        text(2060, 1.2 * max(hbll[[i]][[j]], na.rm = TRUE), MPs[j], xpd = NA, font = 2)
+      }
+      if(j == length(MPs)) {
+        text(x = 2150, y = mean(range(hbll[[i]][[j]], na.rm=TRUE)), names(mse)[i], xpd = NA, srt = -90, font = 2)
+      }
+    }
+  }
+  mtext("Year", side = 1, outer = TRUE, line = 3)
+  mtext("Index", side = 2, outer = TRUE, line = 3)
 }
-setwd(here::here())
+
+
+png("mse/figures/future_hbll.png", height = 8, width = 10, units = "in", res = 500)
+future_hbll(mse, mp_index)
+dev.off()
+
+
+
+
+
+names(sc)[2] <- "scenario_human"
+mp_sat_with_ref <- mp_sat
+custom_pal <- structure(gplots::rich.colors(length(mp_sat)), names = mp_sat)
+satisficed_criteria <- structure(rep(0, length(PM)), names = PM)
+plots <- gfdlm::make_typical_plots(mse_list = mse, pm = PM, scenario_df = sc, this_year = this_year,
+                                   mp_sat = mp_sat, mp_not_sat = mp_sat, mp_not_sat_highlight = mp_sat,
+                                   eg_scenario = "base", custom_pal = custom_pal, satisficed_criteria = satisficed_criteria)
+
+
+
+
