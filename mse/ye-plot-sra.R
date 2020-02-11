@@ -329,16 +329,38 @@ COSEWIC_Bdecline_hist <- function(MSEobj, Ref = 0.7, Yr = NULL) {
   out <- sum(metric >= Ref)/length(metric)
   return(out)
 }
+
+P_LRP <- function(MSEobj, LRP = 0.4) {
+  SSB <- apply(MSEobj@SSB_hist, c(1, 3), sum)
+  metric <- SSB[, MSEobj@nyears]/MSEobj@OM$SSBMSY
+  out <- sum(metric >= LRP)/length(metric)
+  return(out)
+}
+
+
+
 COSEWIC_P70 <- COSEWIC_P50 <- COSEWIC_P30 <- COSEWIC_Bdecline_hist
 formals(COSEWIC_P50)$Ref <- 0.5
 formals(COSEWIC_P30)$Ref <- 0.3
 
 YE_COSEWIC <- rbind(vapply(mse, COSEWIC_P70, numeric(1), Yr = 3 * 38),
                     vapply(mse, COSEWIC_P50, numeric(1), Yr = 3 * 38),
-                    vapply(mse, COSEWIC_P30, numeric(1), Yr = 3 * 38)) %>%
-  structure(dimnames = list(c("P70", "P50", "P30"), sc$scenarios_human)) %>% t()
+                    vapply(mse, COSEWIC_P30, numeric(1), Yr = 3 * 38),
+                    vapply(mse, P_LRP, numeric(1))) %>%
+  structure(dimnames = list(c("P70", "P50", "P30", "LRP"),sc$scenarios_human)) %>%
+    t() %>% as.data.frame()
+YE_COSEWIC$MP <- factor(sc$scenarios_human, levels = sc$scenarios_human)
 
+g <- gfdlm::plot_tigure(YE_COSEWIC, mp_order = rev(sc$scenarios_human))
+ggsave("mse/figures/COSEWIC.png", height = 4, width = 3)
 
+# Plot episodic recruitment
+png("rec_dev.png", height = 4, width = 6, units = "in", res = 400)
+matplot(1918:2119, t(sra_ye$upweight_dogfish@OM@cpars$Perr_y[1:5, -c(1:79)]), typ = 'l', lty = 1, xlab = "Year",
+        ylab = "Recruitment deviations (normal space)")
+dev.off()
 
-
-
+png("rec_dev2.png", height = 4, width = 6, units = "in", res = 400)
+matplot(t(sra_ye$sporadic_recruitment@OM@cpars$Perr_y[1:5, -c(1:79)]), typ = 'l', lty = 1, xlab = "Year",
+        ylab = "Recruitment deviations (normal space)")
+dev.off()

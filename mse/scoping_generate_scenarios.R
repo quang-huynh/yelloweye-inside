@@ -347,11 +347,12 @@ MSEtool:::compare_SRA(SRA_list[[1]], SRA_list[[2]], SRA_list[[3]], SRA_list[[4]]
                                                              col = gplots::rich.colors(5)),
                       render_args = list(output_format = "word_document"))
 
-MSEtool:::compare_SRA(SRA_list[[1]], SRA_list[[2]], SRA_list[[3]], SRA_list[[4]], SRA_list[[5]],
-                      filename = "mse/scoping/compare_SRA", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
-                      MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Up. HBLL", "Fix HBLL sel", "No CPUE"),
+MSEtool:::compare_SRA(SRA_list[[1]], SRA_list[[2]], SRA_list[[6]], SRA_list[[7]], SRA_list[[8]],
+                      filename = "mse/scoping/compare_SRA2", dir = getwd(), open_file = FALSE, f_name = SRA_data$f_name, s_name = SRA_data$s_name,
+                      MSY_ref = c(0.4, 0.8), scenario = list(names = c("Base", "Up. dogfish", "Hi sel", "Low catch", "Low catch up. dogfish"),
                                                              col = gplots::rich.colors(5)),
                       render_args = list(output_format = "word_document"))
+
 ##### function to generate dataframe of mean fits (with scenario names)
 get_sra_survey <- function(sra, scenario, survey_names = c("HBLL", "Dogfish", "CPUE1", "CPUE2", "CPUE3")) {
   report <- sra@mean_fit$report
@@ -583,6 +584,11 @@ dev.off()
 
 ### Fit a surplus production model
 SRA <- readRDS("mse/scoping/SRA_regwt_dogfish.rds")
-mod <- SP(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03)))
+mod <- SP_SS(Data = SRA@OM@cpars$Data, AddInd = 1:5, use_r_prior = TRUE, start = list(r_prior = c(0.068, 0.03)))
 plot(mod, dir = getwd(), filename = "mse/scoping/report_SP", open_file = FALSE)
 
+# Plot SRA data age comps
+png("Commerical_age_comp.png", height = 6, width = 6, res = 400, units = 'in')
+plot(SRA_data$CAA[72,,1], typ = 'l', xlab = "Age", ylab = "Proportion")
+plot_composition(c(1918:2019)[-92], SRA_data$s_CAA[-92,,1], ind = rowSums(SRA_data$s_CAA[-92,,1], na.rm = TRUE) > 0)
+dev.off()
