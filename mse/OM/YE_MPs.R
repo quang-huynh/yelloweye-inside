@@ -83,7 +83,7 @@ SP_4080 <- function(x, Data, reps = 1) {
 }
 class(SP_4080) <- "MP"
 
-SP_2060_5f <- SP_2060_10f <- SP_4080
+SP_4080_5f <- SP_4080_10f <- SP_4080
 
 ##### SP with 20-60 HCR
 SP_2060 <- function(x, Data, reps = 1) {
@@ -104,6 +104,12 @@ interim_MP <- eval(bquote(function(x, Data, reps = 1, assess, assessment_interva
 
   #dependencies <- .(MSEtool:::get_dependencies("SP"))
   I_smooth <- match.arg(I_smooth)
+
+  nyears <- ncol(Data@Cat)
+
+  if(nyears > 103) Data@AddInd[, 2:5, 103:nyears] <- Data@CV_AddInd[, 2:5, 103:nyears] <- NA
+  Data@Ind <- Data@AddInd[, 1, ]
+  Data@CV_Ind <- Data@CV_AddInd[, 1, ]
 
   current_yr <- Data@Year[length(Data@Year)]
   run_assess <- current_yr == Data@LHYear
@@ -152,7 +158,7 @@ interim_MP <- eval(bquote(function(x, Data, reps = 1, assess, assessment_interva
 
   if (run_interim_MP) {
     # Estimate new_VB as new_I/q, then new TAC = UMSY * new_VB - also equivalent: TAC = MSY * I_y / I_MSY
-    q_ratio <- Data@Ind[x, 1]/Data@Misc[[x]]$I[1]
+    q_ratio <- Data@Ind[x, 86]/Data@Misc[[x]]$I[86]
     q_update <- Data@Misc[[x]]$q * q_ratio
 
     if (I_smooth == "none") new_Index <- Data@Ind[x, length(Data@Ind[x, ])]
@@ -187,6 +193,7 @@ interim_MP <- eval(bquote(function(x, Data, reps = 1, assess, assessment_interva
     }
 
     Rec <- new("Rec")
+    #if(is.infinite(TAC_used) || is.na(TAC_used)) browser()
     if(is.infinite(TAC_used) || is.na(TAC_used)) stop("Error in TAC during interim")
     Rec@TAC <- TACfilter(TAC_used)
     if (run_assess) {
@@ -275,7 +282,7 @@ merge_MSE <- function(...) {
   stopifnot(Misc_identical(Unfished))
 
   slotvec_Misc <- c("LatEffort", "Revenue", "Cost", "TAE")
-  Misc_new <- list(Data = Data, TryMP = TryMP, Unfished = Unfished, MSYRefs = MSYRefs)
+  Misc_new <- list(Data = Data, TryMP = TryMP, Unfished = Unfished[[1]], MSYRefs = MSYRefs[[1]])
   Misc2 <- list()
   for(i in 1:length(slotvec_Misc)) {
     mm <- c(lapply(Misc, getElement, slotvec_Misc[i]), along = 2)
